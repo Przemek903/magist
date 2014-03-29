@@ -34,7 +34,7 @@ stress = lastFrame.fieldOutputs['S']
 #Zmienna nodeS przechowuje referencje do wybranego nodeSets( zadanego set'u), 
 #instance odnosi sie wybranej czesci
 #Zmienna elementS przechowuje referencje do wybranego elementSets. konieczne jest /
-# tu ustawienie setu elementow
+# tu ustawienie setu elementow.
 nodeS = odb.rootAssembly.instances['TARCZA-1'].nodeSets['SET-1']
 elementS = odb.rootAssembly.instances['TARCZA-1'].elementSets['SET-2']
 
