@@ -28,7 +28,7 @@ numberFrames = len(odb.steps['Step-1'].frames)
 file = open("D:\magisterka\Python Abaqus praca\model.txt", 'w+b')
 
 for num in range(numberFrames):
-        #Ostatni frame w danym step'ie
+        #Aktualny frame w danym step'ie
         currentFrame = odb.steps['Step-1'].frames[num]
         
         #Zmienna displacement przechowuje wartosc przemieszczen 'U' w ostatnim frame'ie\
