@@ -20,12 +20,10 @@ import scipy.io as sio
 from abaqus import *
 from abaqusConstants import *
 import odbAccess
-#import gui
 
 #Otwieranie i pobieranie dostêpu do pliku odb
 #Wartosc w nawiasie okresla sciezke do otwieranego pliku
 
-#graphic()
 odb = session.openOdb('D:\WorkstationAbqus\modelKomory.odb')
 
 #Liczba frame w danym step'ie
@@ -33,46 +31,72 @@ odb = session.openOdb('D:\WorkstationAbqus\modelKomory.odb')
 numberFrames = len(odb.steps['Step-1'].frames)
 
 
-firstFrame = odb.steps['Step-1'].frames[0]
-displacement = firstFrame.fieldOutputs['U']
-nodeS = odb.rootAssembly.instances['FANTOM-1'].nodeSets['SET-1']
-centerDisplacement = displacement.getSubset(region=nodeS)
-nodeNumbers = len(centerDisplacement.values)
-dispTable = np.zeros((nodeNumbers,3,1))
 
-#Plik file jest plikiem w ktorym zapisywane sa wyniki 
-file = open("D:\magisterka\Python Abaqus praca\model.txt", 'w+b')
+def initDispOrCoordTable (stepName, fieldOut, partName, setName):
+    firstFrame = odb.steps[stepName].frames[0]
+    displacement = firstFrame.fieldOutputs[fieldOut]
+    nodeS = odb.rootAssembly.instances[partName].nodeSets[setName]
+    centerDisplacement = displacement.getSubset(region=nodeS)
+    nodeNumbers = len(centerDisplacement.values)
+    return np.zeros((nodeNumbers,3,1))
 
-for num in range(numberFrames):
+def initStressOrStrainTable(stepName, fieldOut, partName, setName):
+    firstFrame = odb.steps[stepName].frames[0]
+    stress = firstFrame.fieldOutputs[fieldOut]
+    elementS = odb.rootAssembly.instances[partName].elementSets[setName]
+    centerStress = stress.getSubset(region=elementS)
+    elementNumbers = len(centerStress.values)
+    return np.zeros((elementNumbers,6,1))
+
+dispOrCoordTable = initDispOrCoordTable ('Step-1', 'U', 'FANTOM-1', 'SET-1' )
+stressOrStrainTable = initStressOrStrainTable('Step-1', 'S', 'FANTOM-1', 'SET-2' )
+
+
+
+def stressAndStrain(stepName, fieldOut, partName, setName ):    
+
+    for num in range(numberFrames):
         #Aktualny frame w danym step'ie
-        currentFrame = odb.steps['Step-1'].frames[num]
+        currentFrame = odb.steps[stepName].frames[num]
         
-        #Zmienna displacement przechowuje wartosc przemieszczen 'U' w ostatnim frame'ie\
-        # w badanym step'ie
-        # Zmienna displacement przechowuje wartosc naprezen 'S'
+        stress = currentFrame.fieldOutputs[fieldOut]        
         
-        coor = currentFrame.fieldOutputs['COORD']
-        displacement = currentFrame.fieldOutputs['U']
-        stress = currentFrame.fieldOutputs['S']
-        strain = currentFrame.fieldOutputs['LE']
-        #pressure = currentFrame.fieldOutputs['P']
+        elementS = odb.rootAssembly.instances[partName].elementSets[setName]
         
-        #Zmienna nodeS przechowuje referencje do wybranego nodeSets( zadanego set'u), 
-        #instance odnosi sie wybranej czesci
-        #Zmienna elementS przechowuje referencje do wybranego elementSets. konieczne jest \
-        # tu ustawienie setu elementow
+        centerStress = stress.getSubset(region=elementS)
         
-        nodeS = odb.rootAssembly.instances['FANTOM-1'].nodeSets['SET-1']
-        elementS = odb.rootAssembly.instances['FANTOM-1'].elementSets['SET-2']
+        elementNumbers = len(centerStress.values)
+        strTable = np.zeros((elementNumbers,6))
+        co1, co2, co3, co4, co5, co6 = [], [], [], [], [], []
         
-        #Zmienna centerDisplacement przechowuje referencje do przemieszczen w konkretnym\
-        # set'iec
-        #Zmienna centerStress przechowuje referencje do przemieszczen
+        for v in centerStress.values:
+            co1.append(v.data[0])
+            co2.append(v.data[1])
+            co3.append(v.data[2])
+            co4.append(v.data[3])
+            co5.append(v.data[4])
+            co6.append(v.data[5])
+        
+        global stressOrStrainTable
+        #global dispTable
+        stre = zip(co1, co2, co3, co4, co5, co6)
+        strTable[:] = stre
+        str3d = strTable[...,None]
+        stressOrStrainTable = np.dstack((stressOrStrainTable, str3d))
+    return stressOrStrainTable
+
+
+def dispAndCoord(stepName, fieldOut, partName, setName ):
+
+    for num in range(numberFrames):
+        #Aktualny frame w danym step'ie
+        currentFrame = odb.steps[stepName].frames[num]
+        
+        displacement = currentFrame.fieldOutputs[fieldOut]        
+        
+        nodeS = odb.rootAssembly.instances[partName].nodeSets[setName]
         
         centerDisplacement = displacement.getSubset(region=nodeS)
-        centerStress = stress.getSubset(region=elementS)
-        centerStrain = strain.getSubset(region=elementS)
-        centerCoor = coor.getSubset(region=nodeS)
         
         nodeNumbers = len(centerDisplacement.values)
         displacementTable = np.zeros((nodeNumbers,3))
@@ -83,12 +107,23 @@ for num in range(numberFrames):
             col2.append(v.data[1])
             col3.append(v.data[2])
         
+        global dispOrCoordTable
         disp = zip(col1, col2, col3)
         displacementTable[:] = disp
         disp3d = displacementTable[...,None]
-        #dispTable = np.array((nodeNumbers,3,numberFrames))
-        dispTable = np.dstack((dispTable,disp3d))
-        
+        dispOrCoordTable = np.dstack((dispOrCoordTable,disp3d))
+    return dispOrCoordTable
 
-a = dispTable[:,:,1:]
-sio.savemat('displ.mat', {'disp':a})
+stressTable = stressAndStrain('Step-1', 'S', 'FANTOM-1', 'SET-2' )
+stressOrStrainTable = initStressOrStrainTable('Step-1', 'S', 'FANTOM-1', 'SET-2' )
+strainTable = stressAndStrain('Step-1', 'LE', 'FANTOM-1', 'SET-2' )
+dispTable = dispAndCoord('Step-1', 'U', 'FANTOM-1', 'SET-1' )
+dispOrCoordTable = initDispOrCoordTable ('Step-1', 'U', 'FANTOM-1', 'SET-1' )
+coordTable = dispAndCoord('Step-1', 'COORD', 'FANTOM-1', 'SET-1' )
+
+sio.savemat('displ.mat', {'displacement':dispTable[:,:,1:], 'stress':stressTable[:,:,1:], 'strain': strainTable[:,:,1:], 'Coordinate': coordTable[:,:,1:] })
+
+
+
+
+
