@@ -121,9 +121,16 @@ dispTable = dispAndCoord('Step-1', 'U', 'FANTOM-1', 'SET-1' )
 dispOrCoordTable = initDispOrCoordTable ('Step-1', 'U', 'FANTOM-1', 'SET-1' )
 coordTable = dispAndCoord('Step-1', 'COORD', 'FANTOM-1', 'SET-1' )
 
-sio.savemat('displ.mat', {'displacement':dispTable[:,:,1:], 'stress':stressTable[:,:,1:], 'strain': strainTable[:,:,1:], 'Coordinate': coordTable[:,:,1:] })
+fileName = np.array(['modelKomory.odb'])
 
+units = np.array([[([u's'], [u'mm'], [u'N'], [u'rad'], [u'rad'])]], dtype=[('time', 'O'),\
+                        ('distance', 'O'), ('force', 'O'), ('pressure', 'O'), ('rotation', 'O')])
 
+cycleTime = np.array([1])
 
+loads = np.array([[([[40]],)]], dtype=[('Displacement', 'O')])
+
+sio.savemat('displ.mat', {'displacement':dispTable[:,:,1:], 'stress':stressTable[:,:,1:], 'strain': strainTable[:,:,1:], 'Coordinate': coordTable[:,:,1:],\
+                          'filename':fileName, 'units':units, 'cycletime':cycleTime, 'Loads':loads })
 
 
