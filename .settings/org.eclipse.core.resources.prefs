@@ -1,5 +1,6 @@
 eclipse.preferences.version=1
 encoding/gui.py=cp1250
+encoding/loopstrinNode.py=cp1250
 encoding/matloop.py=cp1250
 encoding/skrypt.py=cp1250
 encoding/skryptpetla.py=cp1250
